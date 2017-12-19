@@ -70,7 +70,7 @@ use_local=True
 if use_local:
     local_repository(
 	name = "io_istio_istio",
-	path = "../istio"
+	path = "../../go/src/istio.io/istio"
     )
 else:
     git_repository(
@@ -78,6 +78,38 @@ else:
         commit = ISTIO_SHA,
         remote = "https://github.com/istio/istio",
     )
+
+load("@io_bazel_rules_go//go:def.bzl", "go_repository")
+
+go_repository(
+    name = "org_uber_go_zap",
+    commit = "9cabc84638b70e564c3dab2766efcb1ded2aac9f",  # Jun 8, 2017 (v1.4.1)
+    importpath = "go.uber.org/zap",
+)
+
+go_repository(
+    name = "org_uber_go_atomic",
+    commit = "4e336646b2ef9fc6e47be8e21594178f98e5ebcf",  # Apr 12, 2017 (v1.2.0)
+    importpath = "go.uber.org/atomic",
+)
+
+go_repository(
+    name = "com_github_spf13_pflag",
+    commit = "e57e3eeb33f795204c1ca35f56c44f83227c6e66",
+    importpath = "github.com/spf13/pflag",
+)
+
+go_repository(
+    name = "com_github_spf13_cobra",
+    commit = "2df9a531813370438a4d79bfc33e21f58063ed87",
+    importpath = "github.com/spf13/cobra",
+)
+
+go_repository(
+    name = "com_github_inconshreveable_mousetrap",
+    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    importpath = "github.com/inconshreveable/mousetrap",
+)
 
 load("//src/envoy/mixer/integration_test:repositories.bzl", "mixer_test_repositories")
 mixer_test_repositories()

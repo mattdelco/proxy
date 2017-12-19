@@ -21,7 +21,7 @@ def mixer_client_repositories(bind=True, use_local=False):
     if use_local:
         native.local_repository(
             name = "mixerclient_git",
-            path = "../mixerclient"
+            path = "../../mixerclient"
         )
     else:
         native.git_repository(
