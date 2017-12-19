@@ -15,19 +15,21 @@
 ################################################################################
 #
 
+proxy_use_local=True
+
 load(
     "//src/envoy/mixer:repositories.bzl",
     "mixer_client_repositories",
 )
 
-mixer_client_repositories(use_local=True)
+mixer_client_repositories(use_local=proxy_use_local)
 
 load(
     "@mixerclient_git//:repositories.bzl",
     "mixerapi_repositories",
 )
 
-mixerapi_repositories(use_local=True)
+mixerapi_repositories(use_local=proxy_use_local)
 
 bind(
     name = "boringssl_crypto",
@@ -65,9 +67,7 @@ mixer_api_for_proxy_dependencies()
 
 ISTIO_SHA = "d0142e1afe41c18917018e2fa85ab37254f7e0ca"
 
-use_local=True
-
-if use_local:
+if proxy_use_local:
     local_repository(
 	name = "io_istio_istio",
 	path = "../../go/src/istio.io/istio"
