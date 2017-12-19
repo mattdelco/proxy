@@ -20,14 +20,14 @@ load(
     "mixer_client_repositories",
 )
 
-mixer_client_repositories()
+mixer_client_repositories(use_local=True)
 
 load(
     "@mixerclient_git//:repositories.bzl",
     "mixerapi_repositories",
 )
 
-mixerapi_repositories()
+mixerapi_repositories(use_local=True)
 
 bind(
     name = "boringssl_crypto",
@@ -65,11 +65,19 @@ mixer_api_for_proxy_dependencies()
 
 ISTIO_SHA = "d0142e1afe41c18917018e2fa85ab37254f7e0ca"
 
-git_repository(
-    name = "io_istio_istio",
-    commit = ISTIO_SHA,
-    remote = "https://github.com/istio/istio",
-)
+use_local=True
+
+if use_local:
+    local_repository(
+	name = "io_istio_istio",
+	path = "../istio"
+    )
+else:
+    git_repository(
+        name = "io_istio_istio",
+        commit = ISTIO_SHA,
+        remote = "https://github.com/istio/istio",
+    )
 
 load("//src/envoy/mixer/integration_test:repositories.bzl", "mixer_test_repositories")
 mixer_test_repositories()
