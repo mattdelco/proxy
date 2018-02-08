@@ -41,14 +41,42 @@ REPO=${REPO:-gcr.io}
 
 TAG=${TAG:-$DOCKER_TAG}
 
+USE_LOCAL_HUB=${USE_LOCAL_HUB:-false}
+
 BAZEL_TARGET_DIR="bazel-bin/src/envoy"
 
 BAZEL_TARGET="${BAZEL_TARGET_DIR}/envoy"
-RELEASE_IMAGE_NAME=${RELEASE_IMAGE_NAME:-${REPO}/${PROJECT}/envoy:${TAG}}
-DEBUG_IMAGE_NAME=${DEBUG_IMAGE_NAME:-${REPO}/${PROJECT}/envoy-debug:${TAG}}
+
+if [[ ${USE_LOCAL_HUB} == "true" ]] ; then
+  RELEASE_IMAGE_NAME=envoy
+  DEBUG_IMAGE_NAME=envoy-debug
+else
+  RELEASE_IMAGE_NAME=${RELEASE_IMAGE_NAME:-${REPO}/${PROJECT}/envoy:${TAG}}
+  DEBUG_IMAGE_NAME=${DEBUG_IMAGE_NAME:-${REPO}/${PROJECT}/envoy-debug:${TAG}}
+fi
+
+# The build in isto repo wants both the debug and release docker images. That
+# build also wants the debug envoy binary.  We'll build the debug image last so
+# that it's still present for the istio repo to use when it builds after this repo
 
 if [[ ${1-} != "debug" ]] ; then
-   gcloud docker --authorize-only
+
+  if [[ ${USE_LOCAL_HUB} == "false" ]] ; then
+    gcloud docker --authorize-only
+  fi
+
+  echo Publishing release docker image
+  rm -f ${BAZEL_TARGET_DIR}/envoy
+  bazel build --config=release //src/envoy
+  cp tools/deb/istio-iptables.sh ${BAZEL_TARGET_DIR}
+  cp tools/deb/istio-start.sh ${BAZEL_TARGET_DIR}
+  cp tools/deb/envoy.json ${BAZEL_TARGET_DIR}
+  cp docker/proxy-* ${BAZEL_TARGET_DIR}
+  cp docker/Dockerfile.release ${BAZEL_TARGET_DIR}
+  docker build -f ${BAZEL_TARGET_DIR}/Dockerfile.release -t "${RELEASE_IMAGE_NAME}" ${BAZEL_TARGET_DIR}
+  if [[ ${USE_LOCAL_HUB} == "false" ]] ; then
+    gcloud docker -- push "${RELEASE_IMAGE_NAME}"
+  fi
 fi
 
 echo Publishing debug docker image
@@ -61,23 +89,6 @@ cp docker/proxy-* ${BAZEL_TARGET_DIR}
 cp docker/Dockerfile.debug ${BAZEL_TARGET_DIR}
 docker build -f ${BAZEL_TARGET_DIR}/Dockerfile.debug -t "${DEBUG_IMAGE_NAME}" ${BAZEL_TARGET_DIR}
 
-if [[ ${1-} != "debug" ]] ; then
+if [[ ${1-} != "debug" && ${USE_LOCAL_HUB} == "false" ]] ; then
    gcloud docker -- push "${DEBUG_IMAGE_NAME}"
 fi
-
-if [[ ${1-} == "debug" ]] ; then
-  # Don't push the opt image.
-  exit 0
-fi
-
-echo Publishing release docker image
-rm -f ${BAZEL_TARGET_DIR}/envoy
-bazel build --config=release //src/envoy
-cp tools/deb/istio-iptables.sh ${BAZEL_TARGET_DIR}
-cp tools/deb/istio-start.sh ${BAZEL_TARGET_DIR}
-cp tools/deb/envoy.json ${BAZEL_TARGET_DIR}
-cp docker/proxy-* ${BAZEL_TARGET_DIR}
-cp docker/Dockerfile.release ${BAZEL_TARGET_DIR}
-docker build -f ${BAZEL_TARGET_DIR}/Dockerfile.release -t "${RELEASE_IMAGE_NAME}" ${BAZEL_TARGET_DIR}
-gcloud docker -- push "${RELEASE_IMAGE_NAME}"
-
